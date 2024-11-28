@@ -95,7 +95,12 @@ class pylicator():
 
     def __init_socket(self, address, port):
         sock = socket.socket()
-        sock.bind((address, port))
+        try:
+            sock.bind((address, port))
+        except Exception as e:
+            self.__write_logs(f"FATALERROR: Could not bind socket to port {port}")
+            self.__write_logs(e)
+            exit(1)
         return sock
 
 
@@ -161,9 +166,9 @@ class pylicator():
                 conn, addr = in_sock.accept()
             
             except Exception as e:
-                self.__write_logs("FATALERROR: Can't initialise listen socket")
+                self.__write_logs("FATALERROR: Listen failed on socket")
                 self.__write_logs(e)
-                exit()
+                exit(1)
 
             threading.Thread(target=self.__handle_io, args=(conn, addr)).start()
 
