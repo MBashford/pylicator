@@ -57,7 +57,7 @@ class pylicator():
         listen_port = conf_file.get("default_settings", "listen_port")
 
         self.debug = True if debug.lower() == "true" else False
-        self.__listen_addr = "" if  listen_addr == "None" else listen_addr
+        self.__listen_addr = "" if  listen_addr.lower() == "none" else listen_addr
         self.__listen_port = int(listen_port)
 
         forwd_addr = []
@@ -94,7 +94,7 @@ class pylicator():
 
 
     def __init_socket(self, address, port):
-        sock = socket.socket()
+        sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         try:
             sock.bind((address, port))
         except Exception as e:
@@ -104,12 +104,12 @@ class pylicator():
         return sock
 
 
-    def __write_data_logs(self, entry):
+    def __write_data_logs(self, data):
         try:
             ts = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S:%f")
             self.__data_log_lock.acquire()
             with open(self.__data_log_file, "a") as file:
-                file.write(f"{ts} :: {entry} \n")
+                file.write(f"{ts} :: {data[0]} :: {data[1]} \n")
             self.__data_log_lock.release()
         except Exception as e:
             self.__write_logs("ERROR: Unable to write data logs")
@@ -128,17 +128,13 @@ class pylicator():
             print(e)
 
 
-    def __handle_io(self, sock, addr):
+    def __handle_io(self, data, addr):
         try:   
-            with sock:
-                while True:
-                    data = sock.recv(4096)
+            if self.debug:
+                self.__write_data_logs((addr, data))
 
-                    if self.debug:
-                        self.__write_data_logs((addr, data))
-
-                    for f in self.__forwd_addr:               
-                        self.__send(f["address"], f["port"], data)
+            for f in self.__forwd_addr:               
+                self.__send(f["address"], f["port"], data)
 
         except Exception as e:
             self.__write_logs(f"ERROR: failed to on handleIO from {addr}")
@@ -147,11 +143,12 @@ class pylicator():
 
     def __send(self, addr, port, data):
         try:
-            with socket.socket() as sock:
+            with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as sock:
                 sock.connect((addr, port))
                 sock.send(data)
-        except Exception:
+        except Exception as e:
             self.__write_logs(f"ERROR: couldn't forward to {addr}/{port}")
+            self.__write_logs(e)
 
 
     def pylicate(self):
@@ -162,15 +159,14 @@ class pylicator():
         while True:
             try:
                 in_sock = self.__srv_sock
-                in_sock.listen()
-                conn, addr = in_sock.accept()
+                data, addr = in_sock.recvfrom(4096)
             
             except Exception as e:
                 self.__write_logs("FATALERROR: Listen failed on socket")
                 self.__write_logs(e)
                 exit(1)
 
-            threading.Thread(target=self.__handle_io, args=(conn, addr)).start()
+            threading.Thread(target=self.__handle_io, args=(data, addr)).start()
 
 
 if __name__ == "__main__":
