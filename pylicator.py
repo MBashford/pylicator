@@ -9,6 +9,8 @@ import threading
 import configparser
 import os.path
 
+import asn1
+
 
 test_out = [
     {
@@ -109,7 +111,7 @@ class pylicator():
             ts = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S:%f")
             self.__data_log_lock.acquire()
             with open(self.__data_log_file, "a") as file:
-                file.write(f"{ts} :: {data[0]} :: {data[1]} \n")
+                file.write(f"{ts} :: {data[0][0]}:{data[0][1]} > {data[1]} \n")
             self.__data_log_lock.release()
         except Exception as e:
             self.__write_logs("ERROR: Unable to write data logs")
@@ -131,7 +133,8 @@ class pylicator():
     def __handle_io(self, data, addr):
         try:   
             if self.debug:
-                self.__write_data_logs((addr, data))
+                data_str = self.__decode_asn1(data)
+                self.__write_data_logs((addr, data_str))
 
             for f in self.__forwd_addr:               
                 self.__send(f["address"], f["port"], data)
@@ -149,6 +152,32 @@ class pylicator():
         except Exception as e:
             self.__write_logs(f"ERROR: couldn't forward to {addr}/{port}")
             self.__write_logs(e)
+
+
+    def __decode_asn1(self, byte_str):
+        """Naive decoder, retreives as nested list"""
+
+        dec = asn1.Decoder()
+        dec.start(byte_str)
+
+        def decode_mill(input: asn1.Decoder):
+            output = []
+            
+            while not input.eof():
+                tag = input.peek()
+                if tag.typ == asn1.Types.Primitive:
+                    tag, val = input.read()
+                    val = val.decode() if type(val) is bytes else val
+                    output.append(val)
+
+                elif tag.typ == asn1.Types.Constructed:
+                    input.enter()
+                    output.append(decode_mill(input))
+                    input.leave()
+            return output
+
+        val = decode_mill(dec)
+        return val
 
 
     def pylicate(self):
