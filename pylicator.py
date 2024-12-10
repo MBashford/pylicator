@@ -112,7 +112,7 @@ class pylicator():
             data_str = self.__decode_asn1(data[1])
             self.__data_log_lock.acquire()
             with open(self.__data_log_file, "a") as file:
-                file.write(f"{ts} :: {data[0][0]}:{data[0][1]} > {data[1]} \n")
+                file.write(f"{ts} :: {data[0][0]}:{data[0][1]} > {data_str} \n")
             self.__data_log_lock.release()
         except Exception as e:
             self.__write_logs("ERROR: Unable to write data logs")
@@ -161,20 +161,21 @@ class pylicator():
             dec.start(byte_str)
 
             def decode_mill(input: asn1.Decoder):
-                output = []
+                out_str = ""
+                is_data = False
                 
                 while not input.eof():
                     tag = input.peek()
                     if tag.typ == asn1.Types.Primitive:
                         tag, val = input.read()
-                        val = val.decode() if type(val) is bytes else val
-                        output.append(val)
+                        out_str += f"{"="if is_data else " "}{val}"
+                        is_data = not is_data
 
                     elif tag.typ == asn1.Types.Constructed:
                         input.enter()
-                        output.append(decode_mill(input))
+                        out_str += decode_mill(input)
                         input.leave()
-                return output
+                return out_str
 
             val = decode_mill(dec)
 
