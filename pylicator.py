@@ -13,13 +13,6 @@ import sys
 import asn1
 
 
-test_out = [
-    {
-        "address": "localhost",
-        "port": 162
-    }
-]
-
 class pylicator():
 
     def __init__(self):
