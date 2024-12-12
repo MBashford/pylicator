@@ -72,9 +72,9 @@ class pylicator():
 
         conf_file.add_section("default_settings")
         conf_file.set("default_settings", "# debug = True will log contents of redirected datagrams")
-        conf_file.set("default_settings", "# listen_addr = none is equivalent to 0.0.0.0/32")
-        conf_file.set("default_settings", "#                only accepts ipv4 addresses")
-        conf_file.set("default_settings", "#                subnets not yet supported")
+        conf_file.set("default_settings", "# listen_addr = none is equivalent to 0.0.0.0/0")
+        conf_file.set("default_settings", "#               only accepts ipv4 addresses")
+        conf_file.set("default_settings", "#               subnets not yet supported")
         conf_file.set("default_settings", "debug", "False")
         conf_file.set("default_settings", "listen_addr", "localhost")
         conf_file.set("default_settings", "listen_port", "23")
@@ -94,33 +94,37 @@ class pylicator():
         try:
             sock.bind((address, port))
         except Exception as e:
-            self.__write_logs(f"FATALERROR: Could not bind socket to port {port}")
-            self.__write_logs(e)
+            self.__write_logs([f"FATALERROR: Could not bind socket to port {port}", str(e)])
             exit(1)
         return sock
 
 
+    def __write_to_file(self, f_path: str, lock: threading.Lock, msg: str | list):
+        ts = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S:%f")
+        pad = "                          "
+        if type(msg) == str:
+            msg = msg.splitlines()
+        lines = [l.lstrip() for l in msg]
+        lock.acquire()
+        with open(f_path, "a") as file:
+            start = True
+            for l in lines:
+                file.write(f"{ts if start else pad} :: {l} \n")
+                start = False
+        lock.release()
+
+
     def __write_data_logs(self, data):
         try:
-            ts = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S:%f")
-            data_str = self.__decode_asn1(data[1])
-            self.__data_log_lock.acquire()
-            with open(self.__data_log_file, "a") as file:
-                file.write(f"{ts} :: {data[0][0]}:{data[0][1]} > {data_str} \n")
-                file.write(f"                           :: {data[1]} \n")
-            self.__data_log_lock.release()
+            entry = f"{data[0][0]}:{data[0][1]} > {self.__decode_asn1(data[1])}"
+            self.__write_to_file(self.__data_log_file, self.__data_log_lock, [entry, data[1]])
         except Exception as e:
-            self.__write_logs("ERROR: Unable to write data logs")
-            self.__write_logs(e)
+            self.__write_logs(["ERROR: Unable to write data logs", str(e)])
 
 
     def __write_logs(self, entry):
         try:
-            ts = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S:%f")
-            self.__log_lock.acquire()
-            with open(self.__log_file, "a") as file:
-                file.write(f"{ts} :: {entry} \n")
-            self.__log_lock.release()
+            self.__write_to_file(self.__log_file, self.__log_lock, entry)
         except Exception as e:
             print("ERROR: Logging failed - This may or may not be critical", file=sys.stderr)
             print(e, file=sys.stderr)
@@ -135,8 +139,7 @@ class pylicator():
                 self.__send(f["address"], f["port"], data)
 
         except Exception as e:
-            self.__write_logs(f"ERROR: failed on handleIO from {addr}")
-            self.__write_logs(e)
+            self.__write_logs([f"ERROR: failed on handleIO from {addr}", str(e)])
 
 
     def __send(self, addr, port, data):
@@ -145,8 +148,7 @@ class pylicator():
                 sock.connect((addr, port))
                 sock.send(data)
         except Exception as e:
-            self.__write_logs(f"ERROR: couldn't forward to {addr}/{port}")
-            self.__write_logs(e)
+            self.__write_logs([f"ERROR: couldn't forward to {addr}:{port}", str(e)])
 
 
     def __decode_asn1(self, byte_str):
@@ -185,8 +187,7 @@ class pylicator():
             
 
         except  Exception as e:
-            self.__write_logs("ERROR: Failed to decode received msg")
-            self.__write_logs(e)
+            self.__write_logs(["ERROR: Failed to decode received msg", str(e)])
             val = byte_str
 
         return val
@@ -195,7 +196,7 @@ class pylicator():
     def pylicate(self):
 
         self.__write_logs(f"""Running pylicate (Debug = {self.debug})
-            Listening on {self.__listen_addr}/{self.__listen_port}""")
+            Listening on {self.__listen_addr}:{self.__listen_port}""")
 
         while True:
             try:
@@ -203,8 +204,7 @@ class pylicator():
                 data, addr = in_sock.recvfrom(4096)
             
             except Exception as e:
-                self.__write_logs("FATALERROR: Listen failed on socket")
-                self.__write_logs(e)
+                self.__write_logs(["FATALERROR: Listen failed on socket", str(e)])
                 exit(1)
 
             threading.Thread(target=self.__handle_io, args=(data, addr)).start()
