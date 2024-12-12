@@ -8,6 +8,7 @@ import datetime
 import threading
 import configparser
 import os.path
+import sys
 
 import asn1
 
@@ -113,6 +114,7 @@ class pylicator():
             self.__data_log_lock.acquire()
             with open(self.__data_log_file, "a") as file:
                 file.write(f"{ts} :: {data[0][0]}:{data[0][1]} > {data_str} \n")
+                file.write(f"                           :: {data[1]} \n")
             self.__data_log_lock.release()
         except Exception as e:
             self.__write_logs("ERROR: Unable to write data logs")
@@ -127,8 +129,8 @@ class pylicator():
                 file.write(f"{ts} :: {entry} \n")
             self.__log_lock.release()
         except Exception as e:
-            print("ERROR: Logging failed - This may or may not be critical")
-            print(e)
+            print("ERROR: Logging failed - This may or may not be critical", file=sys.stderr)
+            print(e, file=sys.stderr)
 
 
     def __handle_io(self, data, addr):
@@ -155,7 +157,7 @@ class pylicator():
 
 
     def __decode_asn1(self, byte_str):
-        """Naive decoder, retreives as nested list"""
+        """Naive decoder, returns string with PUD contents as OID=Value pairs"""
         try:
             dec = asn1.Decoder()
             dec.start(byte_str)
@@ -168,6 +170,7 @@ class pylicator():
                     tag = input.peek()
                     if tag.typ == asn1.Types.Primitive:
                         tag, val = input.read()
+                        val = val.decode(errors="backslashreplace") if type(val) is bytes else val
                         out_str += f"{"="if is_data else " "}{val}"
                         is_data = not is_data
 
@@ -178,6 +181,15 @@ class pylicator():
                 return out_str
 
             val = decode_mill(dec)
+
+            # first value pair: SNMPVersion=CommunityString
+            # second two appear to be null vals
+            # errors in decoding seem to be the ans1 decoder unable to understand ip tags
+
+            val_split = val.split(" ", 3)
+            desc = f"C=\"{val_split[1][2:]}\" SNPMV{int(val_split[1][0])+1}"
+            val = f"{desc} {val_split[-1]}"
+            
 
         except  Exception as e:
             self.__write_logs("ERROR: Failed to decode received msg")
