@@ -9,6 +9,7 @@ import threading
 import configparser
 import os.path
 import sys
+import ipaddress
 
 import asn1
 
@@ -17,16 +18,8 @@ class pylicator():
 
     def __init__(self):
 
-        # init with defaults
-        self.debug = False
-        self.__listen_addr = ""
-        self.__listen_port = 23
-        self.__forwd_addr = [
-            {
-                "address": "localhost",
-                "port": 162
-            }
-        ]
+        self.__forwd_rules = {}
+        self.__forwd_rules_str = []
 
         self.__log_file = "pylicator.log"
         self.__data_log_file = "pylicator-data.log"
@@ -41,52 +34,96 @@ class pylicator():
     def __parse_config(self):
         file_name = r"pylicator.conf"
 
-        if os.path.exists(file_name) == False:
-            self.__write_logs("No config file found. Generating config with default values")
-            self.__gen_config(file_name)
+        try:
+            if os.path.exists(file_name) == False:
+                self.__write_logs("No config file found. Generating config with default values")
+                self.__gen_config(file_name)
 
-        conf_file = configparser.ConfigParser()
-        conf_file.read(file_name)
+            conf_file = configparser.ConfigParser()
+            conf_file.read(file_name)
 
-        debug = conf_file.get("default_settings", "debug")
-        listen_addr = conf_file.get("default_settings", "listen_addr")
-        listen_port = conf_file.get("default_settings", "listen_port")
+            log_traps = conf_file.get("settings", "log_traps")
+            log_bytes = conf_file.get("settings", "log_bytes")
+            listen_port = conf_file.get("settings", "listen_port")
 
-        self.debug = True if debug.lower() == "true" else False
-        self.__listen_addr = "" if  listen_addr.lower() == "none" else listen_addr
-        self.__listen_port = int(listen_port)
+            self.__log_traps = True if log_traps.lower() == "true" else False
+            self.__log_bytes = True if log_bytes.lower() == "true" else False
+            self.__listen_addr = "0.0.0.0"
+            self.__listen_port = int(listen_port)
 
-        forwd_addr = []
-        for l in conf_file.items("forwarding_settings"):
-            port_address = l[1].split(":")
-            forwd_addr.append({
-                "address":port_address[0],
-                "port": int(port_address[1])
-            })
+            for l in conf_file.items("forwarding_rules"):
+                self.__set_forwarding_rule(l[0], l[1])
 
-        self.__forwd_addr = forwd_addr
+        except Exception as e:
+            self.__write_logs(["FATALERROR: Unable to parse config file", str(e)])
+            exit(1)
             
 
     def __gen_config(self, file_name):
         conf_file = configparser.ConfigParser(allow_no_value=True)
 
-        conf_file.add_section("default_settings")
-        conf_file.set("default_settings", "# debug = True will log contents of redirected datagrams")
-        conf_file.set("default_settings", "# listen_addr = none is equivalent to 0.0.0.0/0")
-        conf_file.set("default_settings", "#               only accepts ipv4 addresses")
-        conf_file.set("default_settings", "#               subnets not yet supported")
-        conf_file.set("default_settings", "debug", "False")
-        conf_file.set("default_settings", "listen_addr", "localhost")
-        conf_file.set("default_settings", "listen_port", "23")
+        conf_file.add_section("settings")
+        conf_file.set("settings", "# if log_bytes = True traps wil be also be logged as bytearrays")
+        conf_file.set("settings", "log_traps", "False")
+        conf_file.set("settings", "log_bytes", "False")
+        conf_file.set("settings", "listen_port", "162")
+        conf_file.set("settings", "log_path", "")
+        conf_file.set("settings", "data_log_path", "")
 
-        conf_file.add_section("forwarding_settings")
-        conf_file.set("forwarding_settings", "# list as [ip address][port no]")
-        conf_file.set("forwarding_settings", "addr1", "localhost:162")
+        conf_file.add_section("forwarding_rules")
+        conf_file.set("forwarding_rules", "# <origin> = <destination-1> <destination-2>")
+        conf_file.set("forwarding_rules", "0.0.0.0/0", "172.0.0.1:162 192.168.1.86:162")
+        conf_file.set("forwarding_rules", "172.0.0.1/32", "172.0.0.1:5432 192.168.0.1:4321")
 
         with open(file_name, "w") as fp:
             conf_file.write(fp)
 
         self.__write_logs("Config file sucessfully created")
+
+
+    def __set_forwarding_rule(self, orig: str, dest:str):
+        try:
+            if orig in self.__forwd_rules:
+                raise Exception(f"Duplicate forwarding rules for origin {orig}")
+            
+            orig_net = ipaddress.IPv4Network(orig)
+            self.__forwd_rules[orig] = {
+                "netw": int(orig_net.network_address),
+                "mask": int(orig_net.netmask),
+                "frwd_addr": self.__parse_forwading_address_str(dest)
+            }
+            self.__forwd_rules_str.append(f"{orig} > {dest}") # store as text for printing
+
+        except Exception as e:
+            self.__write_logs([f"FATALERROR: Unable to set forwading rule", str(e)])
+            exit(1)
+
+
+    def __parse_forwading_address_str(self, addr_str: str) -> list:
+        """Parse string of <address>:<port> combinations from config"""
+        addrs = addr_str.split(" ")
+        parsed = []
+
+        try:
+            for addr in addrs:
+                addr_port = addr.split(":")
+
+                # check passed ips are valid
+                if len(addr_port) != 2:
+
+                    raise Exception(f"Expected address in format '<ip_address>:<port>', instead got {addr_port}")
+                if (int(addr_port[1]) > 65535) or (int(addr_port[1]) < 1):
+                    raise Exception(f"{addr_port[1]} is not a valid port")
+                
+                ipaddress.IPv4Address(addr_port[0])
+                parsed.append((addr_port[0], int(addr_port[1])))
+                
+
+        except Exception as e:
+            self.__write_logs([f"FATALERROR: Unable to parse forward address", e])
+            exit(1)
+
+        return parsed
 
 
     def __init_socket(self, address, port):
@@ -116,8 +153,11 @@ class pylicator():
 
     def __write_data_logs(self, data):
         try:
-            entry = f"{data[0][0]}:{data[0][1]} > {self.__decode_asn1(data[1])}"
-            self.__write_to_file(self.__data_log_file, self.__data_log_lock, [entry, data[1]])
+            dest = ", ".join([f"{d[0]}:{d[1]}" for d in data[1]]) # join all forwarding addr
+            entry = [f"{data[0][0]}:{data[0][1]} > {dest} {self.__decode_asn1(data[2])}"]
+            if self.__log_bytes:
+                entry.append(data[2])
+            self.__write_to_file(self.__data_log_file, self.__data_log_lock, entry)
         except Exception as e:
             self.__write_logs(["ERROR: Unable to write data logs", str(e)])
 
@@ -128,18 +168,34 @@ class pylicator():
         except Exception as e:
             print("ERROR: Logging failed - This may or may not be critical", file=sys.stderr)
             print(e, file=sys.stderr)
+            print(entry, file=sys.stderr)
 
 
-    def __handle_io(self, data, addr):
-        try:   
-            if self.debug:
-                self.__write_data_logs((addr, data))
+    def __handle_io(self, data: bytes, orig: tuple):
+        try:
+            dest = self.__get_forwarding_addresses(orig[0])
+            if len(dest) < 1:
+                # if address is not in any defined subnet
+                self.__write_logs(f"WARNING: trap received from {orig[0]} originates outside allowed subnets")
 
-            for f in self.__forwd_addr:               
-                self.__send(f["address"], f["port"], data)
+            if self.__log_traps:
+                self.__write_data_logs((orig, dest, data))
+
+            for d in dest:               
+                self.__send(d[0], d[1], data)
 
         except Exception as e:
-            self.__write_logs([f"ERROR: failed on handleIO from {addr}", str(e)])
+            self.__write_logs([f"ERROR: failed on handleIO from {orig}", str(e)])
+
+
+    def __get_forwarding_addresses(self, orig: str) -> set:
+        dest = set()
+        orig = int(ipaddress.IPv4Address(orig))
+        for rule in self.__forwd_rules:
+            r = self.__forwd_rules[rule]
+            if (orig & r["mask"] == r["netw"]):
+                dest.update(r["frwd_addr"])
+        return dest
 
 
     def __send(self, addr, port, data):
@@ -195,8 +251,10 @@ class pylicator():
 
     def pylicate(self):
 
-        self.__write_logs(f"""Running pylicate (Debug = {self.debug})
-            Listening on {self.__listen_addr}:{self.__listen_port}""")
+        self.__write_logs(f"""Running pylicate on port: {self.__listen_port} {"\n ---Logging snmp trap contents---" if self.__log_traps else ""}
+            Forwarding Rules
+            ----------------
+            {"\n".join(self.__forwd_rules_str)}""")
 
         while True:
             try:
