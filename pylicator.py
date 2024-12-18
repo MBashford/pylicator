@@ -70,7 +70,7 @@ class pylicator():
         conf_file = configparser.ConfigParser(allow_no_value=True)
 
         conf_file.add_section("settings")
-        conf_file.set("settings", "# if log_bytes = True traps wil be also be logged as bytearrays")
+        conf_file.set("settings", "# if log_bytes = True traps wil be also be logged as bytearrays for debugging")
         conf_file.set("settings", "listen_port", "162")
         conf_file.set("settings", "log_traps", "False")
         conf_file.set("settings", "log_bytes", "False")
