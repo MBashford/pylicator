@@ -21,6 +21,7 @@ class pylicator():
         self.__forwd_rules = {}
         self.__forwd_rules_str = []
 
+        self.__log_path = ""
         self.__log_file = "pylicator.log"
         self.__data_log_file = "pylicator-data.log"
         self.__log_lock = threading.Lock()
@@ -44,7 +45,13 @@ class pylicator():
 
             log_traps = conf_file.get("settings", "log_traps")
             log_bytes = conf_file.get("settings", "log_bytes")
+            log_path = conf_file.get("settings", "log_path")
             listen_port = conf_file.get("settings", "listen_port")
+
+            if log_path != "" and os.path.exists(log_path):
+                self.__log_path = log_path
+            elif log_path != "":
+                self.__write_logs(f"WARNING: Can't access directory {log_path}, logs will be generated in the local dir") 
 
             self.__log_traps = True if log_traps.lower() == "true" else False
             self.__log_bytes = True if log_bytes.lower() == "true" else False
@@ -64,11 +71,10 @@ class pylicator():
 
         conf_file.add_section("settings")
         conf_file.set("settings", "# if log_bytes = True traps wil be also be logged as bytearrays")
+        conf_file.set("settings", "listen_port", "162")
         conf_file.set("settings", "log_traps", "False")
         conf_file.set("settings", "log_bytes", "False")
-        conf_file.set("settings", "listen_port", "162")
         conf_file.set("settings", "log_path", "")
-        conf_file.set("settings", "data_log_path", "")
 
         conf_file.add_section("forwarding_rules")
         conf_file.set("forwarding_rules", "# <origin> = <destination-1> <destination-2>")
@@ -136,8 +142,9 @@ class pylicator():
         return sock
 
 
-    def __write_to_file(self, f_path: str, lock: threading.Lock, msg: str | list):
+    def __write_to_file(self, f_name: str, lock: threading.Lock, msg: str | list):
         ts = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S:%f")
+        f_path = os.path.join(self.__log_path, f_name)
         pad = "                          "
         if type(msg) == str:
             msg = msg.splitlines()
