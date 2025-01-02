@@ -258,10 +258,11 @@ class pylicator():
 
     def pylicate(self):
 
-        self.__write_logs(f"""Running pylicate on port: {self.__listen_port} {"\n ---Logging snmp trap contents---" if self.__log_traps else ""}
-            Forwarding Rules
-            ----------------
-            {"\n".join(self.__forwd_rules_str)}""")
+        self.__write_logs(f"Running pylicate on port: {self.__listen_port}\n" + 
+                          ("---Logging snmp trap contents---\n" if self.__log_traps else "") +
+                          "Forwarding Rules\n" +
+                          "----------------\n" +
+                          "\n".join(self.__forwd_rules_str))
 
         while True:
             try:
