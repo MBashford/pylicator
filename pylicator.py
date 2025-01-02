@@ -229,7 +229,7 @@ class pylicator():
                     if tag.typ == asn1.Types.Primitive:
                         tag, val = input.read()
                         val = val.decode(errors="backslashreplace") if type(val) is bytes else val
-                        out_str += f"{"="if is_data else " "}{val}"
+                        out_str += f"{'=' if is_data else ' '}{val}"
                         is_data = not is_data
 
                     elif tag.typ == asn1.Types.Constructed:
