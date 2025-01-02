@@ -10,7 +10,7 @@ The recommended way to install pylicator is by using pip. To get the latest stab
 Alternatively, clone the git repo with:  
 `git clone https://github.com/MBashford/pylicator.git`
 
-Cloning the repo will require dependencies to be installed separately. Do this manually or by calling `python setup.py` from the pylicator root directory.
+Cloning the repo will require dependencies to be installed separately. Do this manually or by running `python setup.py` from the pylicator root directory.
 
 ## Configuration ##
 Once installed locate the config file, **pylicator.conf**, in the pylicator root direcory. If installed via pip, this location can be found with:  
