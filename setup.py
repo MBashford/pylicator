@@ -15,5 +15,6 @@ setup(
     description=DESCRIPTION,
     long_description=LONG_DESCRIPTION,
     py_modules=["pylicator"],
-    install_requires=["asn1"]
+    install_requires=["asn1"],
+    data_files=[("", ["pylicator.service"])]
 )
