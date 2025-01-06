@@ -9,8 +9,8 @@ After=network.target
 [Service]
 Type=simple
 User=root
-WorkingDirectory = /home/nmc/pylicator/
-ExecStart = /home/nmc/pylicator/pylicator.py
+WorkingDirectory=/home/nmc/pylicator/
+ExecStart=/home/nmc/pylicator/pylicator.py
 # Restart=always
 
 [Install]
