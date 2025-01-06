@@ -2,21 +2,33 @@
 A SNMP trap exploder/forwarder implemented in python
 
 ## Getting Pylicator ##
+Whatever method used to get Pylicator, it is recommended to run it from a python virtual environment. Start by creating and navigting into a directory for the project with `mkdir Pylicator` & `cd Pylicator`.
+
+Then create a python virtual environment named pylicatorVenv within the directory using:  
+
+`python -m venv pylicatorVenv`  
+
+And activate the virtual environment using:  
+
+`source pylicatorVenv/bin/activate`
+
+Now install Pylicator using one of the below methods
+
 ### Install using PIP ###
-The recommended way to install pylicator is by using pip. To get the latest stable version use:  
+To install the latest stable version usig pip:  
 `pip install pip@git+https://github.com/MBashford/pylicator.git`
 
 ### Cloning the git repo ###
 Alternatively, clone the git repo with:  
 `git clone https://github.com/MBashford/pylicator.git`
 
-Cloning the repo will require dependencies to be installed separately. Do this manually or by running `python setup.py` from the pylicator root directory.
+Cloning the repo will require dependencies to be installed separately. Do this manually or by running `python setup.py install` from the pylicator root directory.
 
 ## Configuration ##
-Once installed locate the config file, **pylicator.conf**, in the pylicator root direcory. If installed via pip, this location can be found with:  
+Once installed locate the config file, **pylicator.conf**, in the pylicator root directory. If installed via pip, this location can be found with:  
 `pip show pylicator`
 
-If there is no **pylicator.conf** file in this directory, running pylicator with `python pylicator.py` will cause it to start with the with the default settings and  generate a new config file in the pylicator root directory.
+If there is no **pylicator.conf** file in this directory, running pylicator with `python pylicator.py` will cause it to start with the with the default settings and generate a new config file in the pylicator root directory.
 
 The config file contains the following sections:
 
@@ -50,14 +62,18 @@ WorkingDirectory = <path-to-pylicator-root-directory>
 ExecStart = <path-to-pylicator-root-directory>/pylicator.py
 ```
 
-Edit the above fields  in the service file to point at the pylicator root directory, then copy **pylicator.service** to the `/etc/systemd/system` directory. For deployment in production environments it is also recommended to set `Restart=always` so that the pylicator service will start on system reboot. 
+Edit the above fields  in the service file to point at the directory containing pylicator.py, then copy **pylicator.service** to the `/etc/systemd/system` directory. If running Pylicator from a virtual envionment set the 'ExecStart' option as:
+
+`ExecStart = <path-to-pylicatorVenv>/bin/python <path-to-pylicator-root-directory>/pylicator.py`  
+
+For deployment in production environments it is also recommended to set `Restart=always` so that the pylicator service will start on system reboot. 
 
 Execute `systemctl daemon-reload` to reload the systemd configuration, you should then be able to start and stop the pylicator service with `systemctl start pylicator.service` and `systemctl stop pylicator.service`. Use `systemctl status pylicator.service` to verify that pylicator is running correctly.
-
- 
 
 
 ## Contributors ##
 - Milo Bashford (<milo.bashford@gmail.com>)
+
 ## License ##
 Pylicator is free software that is made available under the MIT license.
+
