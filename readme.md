@@ -64,11 +64,15 @@ ExecStart = <path-to-pylicator-root-directory>/pylicator.py
 
 Edit the above fields  in the service file to point at the directory containing pylicator.py, then copy **pylicator.service** to the `/etc/systemd/system` directory. If running Pylicator from a virtual envionment set the 'ExecStart' option as:
 
-`ExecStart = <path-to-pylicatorVenv>/bin/python <path-to-pylicator-root-directory>/pylicator.py`  
+`ExecStart = <path-to-virtual-env>/bin/python <path-to-pylicator-root-directory>/pylicator.py`  
 
 For deployment in production environments it is also recommended to set `Restart=always` so that the pylicator service will restart should it exit unexpectedly. 
 
 Execute `systemctl daemon-reload` to reload the systemd configuration, you should then be able to start and stop the pylicator service with `systemctl start pylicator.service` and `systemctl stop pylicator.service`. Use `systemctl status pylicator.service` to verify that pylicator is running correctly. Set Pylicator to start on system boot with `systemctl enable pylicator.service`.
+
+## Planned Featues ##
+- Optional load-balancing for traps forwarded to multiple destinations
+- Track metrics for recieved traps, frequency by origin subnet, destination, etc.
 
 ## Contributors ##
 - Milo Bashford (<milo.bashford@gmail.com>)
