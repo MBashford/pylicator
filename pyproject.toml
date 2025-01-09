@@ -15,3 +15,9 @@ authors = [
 description = "A SNMP trap exploder/forwarder implemented in python"
 readme = {file = "README.md", content-type = "text/markdown"}
 license = {file = "LICENSE"}
+
+[tool.setuptools]
+py-modules = ["pylicator"]
+
+[tool.setuptools.package-data]
+"pylicator" = ["pylicator.service"]
