@@ -1,0 +1,17 @@
+[build-system]
+requires = ["setuptools >= 61.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "pylicator"
+version = "0.1.1"
+requires-python = ">= 3.11.2"
+dependencies = [
+  "asn1",
+]
+authors = [
+  {name = "Milo Bashford", email = "milobashford@gmail.com"},
+]
+description = "A SNMP trap exploder/forwarder implemented in python"
+readme = {file = "README.md", content-type = "text/markdown"}
+license = {file = "LICENSE"}
