@@ -16,7 +16,7 @@ Now install Pylicator using one of the below methods
 
 ### Install using PIP ###
 To install the latest stable version usig pip:  
-`pip install pip@git+https://github.com/MBashford/pylicator.git`
+`pip install git+https://github.com/MBashford/pylicator.git`
 
 ### Cloning the git repo ###
 Alternatively, clone the git repo with:  
