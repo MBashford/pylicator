@@ -11,7 +11,7 @@ Type=simple
 User=root
 WorkingDirectory=/home/nmc/pylicator/
 ExecStart=/home/nmc/pylicator/pylicator.py
-# Restart=always
+Restart=no
 
 [Install]
 WantedBy=multi-user.target
