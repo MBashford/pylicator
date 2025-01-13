@@ -18,5 +18,5 @@ setup(
     packages=["pylicator"],
     install_requires=["asn1"],
     package_dir={"": "src"},
-    data_files=[("pylicator", ["pylicator.service"])]
+    package_data={"pylicator", ["pylicator.service"]}
 )
