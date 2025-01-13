@@ -10,7 +10,7 @@ traps using python-asn1 to perform a naive decode of the SNMP PUD
 setup(
     name="pylicator",
     version=VERSION,
-    python_requires='>=3.11.2',
+    python_requires='>=3.8',
     author="Milo Bashford",
     author_email="milobashford@gmail.com",
     description=DESCRIPTION,

@@ -13,6 +13,8 @@ import ipaddress
 
 import asn1
 
+from typing import Union
+
 
 class pylicator():
 
@@ -142,7 +144,7 @@ class pylicator():
         return sock
 
 
-    def __write_to_file(self, f_name: str, lock: threading.Lock, msg: str | list):
+    def __write_to_file(self, f_name: str, lock: threading.Lock, msg: Union[str, list]):
         ts = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S:%f")
         f_path = os.path.join(self.__log_path, f_name)
         pad = "                          "

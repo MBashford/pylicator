@@ -5,7 +5,7 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "pylicator"
 version = "0.1.1"
-requires-python = ">= 3.11.2"
+requires-python = ">= 3.8"
 dependencies = [
   "asn1",
 ]
