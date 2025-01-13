@@ -15,7 +15,8 @@ setup(
     author_email="milobashford@gmail.com",
     description=DESCRIPTION,
     long_description=LONG_DESCRIPTION,
-    py_modules=["pylicator"],
+    packages=["pylicator"],
     install_requires=["asn1"],
+    package_dir={"": "src"},
     data_files=[("pylicator", ["pylicator.service"])]
 )
