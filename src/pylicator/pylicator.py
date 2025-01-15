@@ -14,6 +14,7 @@ import ipaddress
 import asn1
 
 from typing import Union
+from packet import Packet
 
 
 class pylicator():
@@ -49,6 +50,7 @@ class pylicator():
             log_bytes = conf_file.get("settings", "log_bytes")
             log_path = conf_file.get("settings", "log_path")
             listen_port = conf_file.get("settings", "listen_port")
+            spoof_src = conf_file.get("settings", "spoof_src")
 
             if log_path != "" and os.path.exists(log_path):
                 self.__log_path = log_path
@@ -59,6 +61,7 @@ class pylicator():
             self.__log_bytes = True if log_bytes.lower() == "true" else False
             self.__listen_addr = "0.0.0.0"
             self.__listen_port = int(listen_port)
+            self.__spoof_src = True if spoof_src.lower() == "true" else False
 
             for l in conf_file.items("forwarding_rules"):
                 self.__set_forwarding_rule(l[0], l[1])
@@ -73,10 +76,12 @@ class pylicator():
 
         conf_file.add_section("settings")
         conf_file.set("settings", "# if log_bytes = True traps wil be also be logged as bytearrays for debugging")
+        conf_file.set("settings", "# if spoof_src = True maintains original source ips in forwarded traps")
         conf_file.set("settings", "listen_port", "162")
         conf_file.set("settings", "log_traps", "False")
         conf_file.set("settings", "log_bytes", "False")
         conf_file.set("settings", "log_path", "")
+        conf_file.set("settings", "spoof_src", "False")
 
         conf_file.add_section("forwarding_rules")
         conf_file.set("forwarding_rules", "# <origin> = <destination-1> <destination-2>")
@@ -86,7 +91,7 @@ class pylicator():
         with open(file_name, "w") as fp:
             conf_file.write(fp)
 
-        self.__write_logs("Config file sucessfully created")
+        self.__write_logs(["Config file sucessfully created", "Exiting Pylicator"])
 
 
     def __set_forwarding_rule(self, orig: str, dest:str):
