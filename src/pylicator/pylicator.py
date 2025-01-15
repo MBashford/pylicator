@@ -95,6 +95,7 @@ class pylicator():
             conf_file.write(fp)
 
         self.__write_logs(["Config file sucessfully created", "Exiting Pylicator"])
+        exit(0)
 
 
     def __set_forwarding_rule(self, orig: str, dest:str):
@@ -286,6 +287,7 @@ class pylicator():
 
         self.__write_logs(f"Running pylicate on port: {self.__listen_port}\n" + 
                           ("---Logging snmp trap contents---\n" if self.__log_traps else "") +
+                          ("---Spoofing source IP Address---\n" if self.__spoof_src else "") +
                           "Forwarding Rules\n" +
                           "----------------\n" +
                           "\n".join(self.__forwd_rules_str))
