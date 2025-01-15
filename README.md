@@ -2,7 +2,7 @@
 A SNMP trap exploder/forwarder implemented in python
 
 ## Getting Pylicator ##
-Whatever method used to get Pylicator, it is recommended to run it from a python virtual environment. Start by creating and navigting into a directory for the project with `mkdir Pylicator` & `cd Pylicator`.
+Pylicator requires pPython 3.8 or above. Whatever method used to get Pylicator, it is recommended to run it from a python virtual environment. Start by creating and navigting into a directory for the project with `mkdir Pylicator` & `cd Pylicator`.
 
 Then create a python virtual environment named pylicatorVenv within the directory using:  
 
@@ -28,7 +28,7 @@ Cloning the repo will require dependencies to be installed separately. Do this m
 Once installed locate the config file, **pylicator.conf**, in the pylicator root directory. If installed via pip, this location can be found with:  
 `pip show pylicator`
 
-If there is no **pylicator.conf** file in this directory, running pylicator with `python pylicator.py` will cause it to start with the with the default settings and generate a new config file in the pylicator root directory.
+If there is no **pylicator.conf** file in this directory, running pylicator with `python pylicator.py` will cause it to generate a sample config file in the pylicator root directory and exit.
 
 The config file contains the following sections:
 
@@ -41,6 +41,9 @@ listen_port | the port pylicator will listen on for incoming SNMP traps, default
 log_path | path to the directory containig log files, leaving blank will cause logs to be written in the pylicator root directory.
 log_traps | if pylicator will attempt to parse and log the contents of recieved traps using the included naive asn1 decoder.
 log_bytes | if the recived traps will be logged as bytes in addition to the parsed contents. Requires trap logging to be enabled.
+spoof_src* | determines the source address to use on forwarded packets. True: use ip received with traps, False: use pylicator host ip
+
+*Note ip spoofing not supported on some windows version, setting this to True may cause traps to be lost
 
 
 ### Forwarding Rules ###
