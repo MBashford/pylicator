@@ -222,8 +222,8 @@ class pylicator():
             if self.__spoof_src:
                 # build custom ip packet
                 pack = Packet(origin, dest, data, c)
-                with socket.socket(socket.AF_INET, socket.SOCK_RAW, socket.IPPROTO_IP) as sock:
-                    sock.setsockopt(socket.IPPROTO_IP, socket.IP_HDRINCL, 1)
+                with socket.socket(socket.AF_INET, socket.SOCK_RAW, socket.IPPROTO_RAW) as sock:
+                    sock.setsockopt(socket.IPPROTO_IP, socket.IP_HDRINCL, True)
                     sock.sendto(pack.get_ip_packet(), dest)
             else:
                 with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as sock:
