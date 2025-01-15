@@ -30,6 +30,9 @@ class pylicator():
         self.__log_lock = threading.Lock()
         self.__data_log_lock = threading.Lock()
 
+        self.__count_out = 0
+        self.__count_out_lock = threading.Lock()
+
         self.__parse_config()
 
         self.__srv_sock = self.__init_socket(self.__listen_addr, self.__listen_port)
@@ -196,7 +199,7 @@ class pylicator():
                 self.__write_data_logs((orig, dest, data))
 
             for d in dest:               
-                self.__send(d[0], d[1], data)
+                self.__send(orig, d, data)
 
         except Exception as e:
             self.__write_logs([f"ERROR: failed on handleIO from {orig}", str(e)])
@@ -212,13 +215,21 @@ class pylicator():
         return dest
 
 
-    def __send(self, addr, port, data):
+    def __send(self, origin: tuple, dest: tuple, data: bytes):
         try:
-            with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as sock:
-                sock.connect((addr, port))
-                sock.send(data)
+            c = self.__iter_count_out()
+            if self.__spoof_src:
+                # build custom ip packet
+                pack = Packet(origin, dest, data, c)
+                with socket.socket(socket.AF_INET, socket.SOCK_RAW, socket.IPPROTO_IP) as sock:
+                    sock.setsockopt(socket.IPPROTO_IP, socket.IP_HDRINCL, 1)
+                    sock.sendto(pack.get_ip_packet(), dest)
+            else:
+                with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as sock:
+                    sock.connect(dest)
+                    sock.send(data)
         except Exception as e:
-            self.__write_logs([f"ERROR: couldn't forward to {addr}:{port}", str(e)])
+            self.__write_logs([f"ERROR: couldn't forward to {dest[0]}:{dest[1]}", str(e)])
 
 
     def __decode_asn1(self, byte_str):
@@ -261,6 +272,14 @@ class pylicator():
             val = byte_str
 
         return val
+    
+
+    def __iter_count_out(self) -> int:
+        self.__count_out_lock.acquire()
+        c = self.__count_out
+        self.__count_out = 0 if self.__count_out == 65535 else self.__count_out + 1
+        self.__count_out_lock.release()
+        return c
 
 
     def pylicate(self):
