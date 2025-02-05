@@ -11,11 +11,11 @@ import os.path
 import sys
 import ipaddress
 import struct
+import string
 
 import asn1
 
 from typing import Union
-from packet import Packet
 
 
 class pylicator():
@@ -234,23 +234,56 @@ class pylicator():
             self.__write_logs([f"ERROR: couldn't forward to {dest[0]}:{dest[1]}", str(e)])
 
 
-    def __decode_asn1(self, byte_str):
-        """Naive decoder, returns string with PUD contents as OID=Value pairs"""
+    def __decode_asn1( byte_str):
+        """Naive decoder, returns string with PDU contents as OID=Value pairs"""
+
+        def naive_parse(tag, val: bytes):
+            "try to resolve bytes not understood by asn1 decoder"
+            try:
+                # Unknowns (0)
+                if tag.nr == 0:
+                    # try to parse as IPV4 address
+                    if len(val) == 4:
+                        val = ".".join([str(oct) for oct in val])
+
+                # parse bool (1), and
+                # parse integer (2), and
+                # parse bitstring as int (3)
+                elif tag.nr in [1, 2, 3]:
+                    val = str(val).replace("\\x", "")[2:-1]
+                    for char in val:
+                        if char not in set(string.hexdigits):
+                            val = val.replace(char, char.encode().hex())
+                    val = int(val, 16)
+
+                # parse octet string (4)
+                elif tag.nr == 4:
+                    val = f"\"{val.decode()}\""
+
+            except:
+                val = f"\"{str(val)[2:-1]}\""
+
+            return val
+        
         try:
             dec = asn1.Decoder()
             dec.start(byte_str)
 
             def decode_mill(input: asn1.Decoder):
                 out_str = ""
-                is_data = False
-                
+                flag = False
+                    
                 while not input.eof():
                     tag = input.peek()
                     if tag.typ == asn1.Types.Primitive:
                         tag, val = input.read()
-                        val = val.decode(errors="backslashreplace") if type(val) is bytes else val
-                        out_str += f"{'=' if is_data else ' '}{val}"
-                        is_data = not is_data
+                        if type(val) is bytes:
+                            val = naive_parse(tag, val)
+                        out_str += f"{'=' if flag else '  '}{val}"
+                        if tag.nr == 6 and flag == False:
+                            flag = True
+                        else:
+                            flag = False
 
                     elif tag.typ == asn1.Types.Constructed:
                         input.enter()
@@ -260,17 +293,12 @@ class pylicator():
 
             val = decode_mill(dec)
 
-            # first value pair: SNMPVersion=CommunityString
-            # second two appear to be null vals
-            # errors in decoding seem to be the ans1 decoder unable to understand ip tags
-
-            val_split = val.split(" ", 3)
-            desc = f"C=\"{val_split[1][2:]}\" SNPMV{int(val_split[1][0])+1}"
-            val = f"{desc} {val_split[-1]}"
-            
+            val_split = val.split("  ", 3)
+            val = f"C={val_split[2]} SNMPv{int(val_split[1])+1}  {val_split[3]}"
+        
 
         except  Exception as e:
-            self.__write_logs(["ERROR: Failed to decode received msg", str(e)])
+            print(e)
             val = byte_str
 
         return val
