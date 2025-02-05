@@ -234,7 +234,7 @@ class pylicator():
             self.__write_logs([f"ERROR: couldn't forward to {dest[0]}:{dest[1]}", str(e)])
 
 
-    def __decode_asn1( byte_str):
+    def __decode_asn1(self, byte_str):
         """Naive decoder, returns string with PDU contents as OID=Value pairs"""
 
         def naive_parse(tag, val: bytes):
