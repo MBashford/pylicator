@@ -2,7 +2,7 @@
 A SNMP trap exploder/forwarder implemented in python
 
 ## Getting Pylicator ##
-Pylicator requires pPython 3.8 or above. Whatever method used to get Pylicator, it is recommended to run it from a python virtual environment. Start by creating and navigting into a directory for the project with `mkdir Pylicator` & `cd Pylicator`.
+Pylicator requires Python 3.8 or above. Whatever method used to get Pylicator, it is recommended to run it from a python virtual environment. Start by creating and navigting into a directory for the project with `mkdir Pylicator` & `cd Pylicator`.
 
 Then create a python virtual environment named pylicatorVenv within the directory using:  
 
