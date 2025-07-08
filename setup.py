@@ -1,6 +1,6 @@
 from setuptools import setup
 
-VERSION = "0.1.3"
+VERSION = "0.1.4"
 DESCRIPTION = "A SNMP trap exploder/forwarder implemented in python"
 LONG_DESCRIPTION = """
 A SNMP trap exploder/forwarder implemented in python. Enables logging received 
