@@ -286,7 +286,7 @@ class pylicator():
                 while not input.eof():
                     tag = input.peek()
                     # work around: asn1 module update appears to have broken eof()
-                    if tag.typ is None:
+                    if tag is None:
                         break
                     if tag.typ == asn1.Types.Primitive:
                         tag, val = input.read()
@@ -311,7 +311,7 @@ class pylicator():
         
 
         except  Exception as e:
-            self.__write_logs(f"WARNING: Error parsing ASN1", e)
+            self.__write_logs([f"WARNING: Error parsing ASN1", e])
             val = byte_str
 
         return val
