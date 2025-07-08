@@ -3,15 +3,17 @@
 Might work for other traffic too, inspired by samplicator"""
 __author__ = "Milo Bashford"
 
-import socket
-import datetime
-import threading
+import atexit
 import configparser
-import os.path
-import sys
+import datetime
 import ipaddress
-import struct
+import os.path
+import signal
+import socket
 import string
+import struct
+import sys
+import threading
 
 import asn1
 
@@ -38,6 +40,10 @@ class pylicator():
 
         self.__srv_sock = self.__init_socket(self.__listen_addr, self.__listen_port)
 
+        atexit.register(self.__exit_handler)
+        signal.signal(signal.SIGTERM, self.__sig_handler)
+        signal.signal(signal.SIGINT, self.__sig_handler)
+
 
     def __parse_config(self):
         file_name = r"pylicator.conf"
@@ -58,7 +64,12 @@ class pylicator():
 
             if log_path != "" and os.path.exists(log_path):
                 self.__log_path = log_path
-            elif log_path != "":
+
+            self.__write_logs("----------------------\n" +
+                            "Initialising Pylicator\n" +
+                            "----------------------")
+
+            if log_path != self.__log_path:
                 self.__write_logs(f"WARNING: Can't access directory {log_path}, logs will be generated in the local dir") 
 
             self.__log_traps = True if log_traps.lower() == "true" else False
@@ -310,7 +321,21 @@ class pylicator():
         self.__count_out = 0 if self.__count_out == 65535 else self.__count_out + 1
         self.__count_out_lock.release()
         return c
+    
 
+    def __exit_handler(self):
+
+        self.__log_lock.release()
+        self.__data_log_lock.release()
+
+        self.__write_logs("---------------------\n" +
+                        "Terminating Pylicator\n" +
+                        "---------------------")
+
+
+    def __sig_handler(self, *args):
+        sys.exit(0)
+        
 
     def pylicate(self):
 
