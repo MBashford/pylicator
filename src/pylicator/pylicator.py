@@ -3,7 +3,6 @@
 Might work for other traffic too, inspired by samplicator"""
 __author__ = "Milo Bashford"
 
-import atexit
 import configparser
 import datetime
 import ipaddress
@@ -40,9 +39,8 @@ class pylicator():
 
         self.__srv_sock = self.__init_socket(self.__listen_addr, self.__listen_port)
 
-        atexit.register(self.__exit_handler)
-        signal.signal(signal.SIGTERM, self.__sig_handler)
-        signal.signal(signal.SIGINT, self.__sig_handler)
+        signal.signal(signal.SIGTERM, self.__exit)
+        signal.signal(signal.SIGINT, self.__exit)
 
 
     def __parse_config(self):
@@ -83,7 +81,7 @@ class pylicator():
 
         except Exception as e:
             self.__write_logs(["FATALERROR: Unable to parse config file", str(e)])
-            exit(1)
+            self.__exit(status=1)
             
 
     def __gen_config(self, file_name):
@@ -107,7 +105,7 @@ class pylicator():
             conf_file.write(fp)
 
         self.__write_logs(["Config file sucessfully created", "Exiting Pylicator"])
-        exit(0)
+        self.__exit(status=0)
 
 
     def __set_forwarding_rule(self, orig: str, dest:str):
@@ -124,8 +122,8 @@ class pylicator():
             self.__forwd_rules_str.append(f"{orig} > {dest}") # store as text for printing
 
         except Exception as e:
-            self.__write_logs([f"FATALERROR: Unable to set forwading rule", str(e)])
-            exit(1)
+            self.__write_logs([f"FATALERROR: Unable to set forwading rule for Origin '{orig}'", str(e)])
+            self.__exit(status=1)
 
 
     def __parse_forwading_address_str(self, addr_str: str) -> list:
@@ -150,7 +148,7 @@ class pylicator():
 
         except Exception as e:
             self.__write_logs([f"FATALERROR: Unable to parse forward address", e])
-            exit(1)
+            self.__exit(status=1)
 
         return parsed
 
@@ -161,7 +159,7 @@ class pylicator():
             sock.bind((address, port))
         except Exception as e:
             self.__write_logs([f"FATALERROR: Could not bind socket to port {port}", str(e)])
-            exit(1)
+            self.__exit(status=1)
         return sock
 
 
@@ -323,7 +321,7 @@ class pylicator():
         return c
     
 
-    def __exit_handler(self):
+    def __exit(self, status=0, *args):
 
         self.__log_lock.release()
         self.__data_log_lock.release()
@@ -331,11 +329,9 @@ class pylicator():
         self.__write_logs("---------------------\n" +
                         "Terminating Pylicator\n" +
                         "---------------------")
-
-
-    def __sig_handler(self, *args):
-        sys.exit(0)
         
+        sys.exit(status)
+     
 
     def pylicate(self):
 
@@ -353,7 +349,7 @@ class pylicator():
             
             except Exception as e:
                 self.__write_logs(["FATALERROR: Listen failed on socket", str(e)])
-                exit(1)
+                self.__exit(status=1)
 
             threading.Thread(target=self.__handle_io, args=(data, addr)).start()
 
