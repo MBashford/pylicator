@@ -323,9 +323,11 @@ class pylicator():
     
 
     def __exit(self, status=0, *args):
-
-        self.__log_lock.release()
-        self.__data_log_lock.release()
+        
+        if self.__log_lock.locked():
+            self.__log_lock.release()
+        if self.__data_log_lock.locked():
+            self.__data_log_lock.release()
 
         self.__write_logs("---------------------\n" +
                         "Terminating Pylicator\n" +
