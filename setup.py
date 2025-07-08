@@ -16,7 +16,7 @@ setup(
     description=DESCRIPTION,
     long_description=LONG_DESCRIPTION,
     packages=["pylicator"],
-    install_requires=["asn1"],
+    install_requires=["asn1 == 3.1.0"],
     package_dir={"": "src"},
     package_data={"pylicator": ["pylicator.service"]}
 )

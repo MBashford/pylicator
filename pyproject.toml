@@ -7,7 +7,7 @@ name = "pylicator"
 version = "0.1.4"
 requires-python = ">= 3.8"
 dependencies = [
-  "asn1",
+  "asn1 == 3.1.0",
 ]
 authors = [
   {name = "Milo Bashford", email = "milobashford@gmail.com"},
