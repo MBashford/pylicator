@@ -130,26 +130,27 @@ class pylicator():
         """Parse string of <address>:<port> combinations from config"""
         addrs = addr_str.split(" ")
         parsed = []
+        for addr in addrs:
+            addr_port = addr.split(":")
 
-        try:
-            for addr in addrs:
-                addr_port = addr.split(":")
+            # check destination ips are valid
+            if len(addr_port) == 1:
+                self.__write_logs(f"WARNING: No port specified for destination {addr_port[0]}.\nUsing port 162 as default")
+                addr_port.append("162")
 
-                # check passed ips are valid
-                if len(addr_port) != 2:
+            if len(addr_port) != 2:
+                raise Exception(f"Expected destination address in format '<ip_address>:<port>', instead got {addr_port}")
+            
+            if (int(addr_port[1]) > 65535) or (int(addr_port[1]) < 1):
+                raise Exception(f"{addr_port[1]} is not a valid port")
 
-                    raise Exception(f"Expected address in format '<ip_address>:<port>', instead got {addr_port}")
-                if (int(addr_port[1]) > 65535) or (int(addr_port[1]) < 1):
-                    raise Exception(f"{addr_port[1]} is not a valid port")
-                
+            try:
                 ipaddress.IPv4Address(addr_port[0])
-                parsed.append((addr_port[0], int(addr_port[1])))
+            except:
+                raise Exception(f"FATALERROR: {addr_port[0]} is not a valid IP address")
+            
+            parsed.append((addr_port[0], int(addr_port[1])))
                 
-
-        except Exception as e:
-            self.__write_logs([f"FATALERROR: Unable to parse forward address", e])
-            self.__exit(status=1)
-
         return parsed
 
 
