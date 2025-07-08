@@ -160,7 +160,7 @@ class pylicator():
         pad = "                          "
         if type(msg) == str:
             msg = msg.splitlines()
-        lines = [l.lstrip() for l in msg]
+        lines = [str(l).lstrip() for l in msg]
         lock.acquire()
         with open(f_path, "a") as file:
             start = True
