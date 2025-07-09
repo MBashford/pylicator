@@ -65,7 +65,8 @@ class pylicator():
 
             self.__write_logs("----------------------\n" +
                             "Initialising Pylicator\n" +
-                            "----------------------")
+                            "----------------------\n" +
+                            f"Parsing config from {os.path.abspath(file_name)}")
 
             if log_path != self.__log_path:
                 self.__write_logs(f"WARNING: Can't access directory {log_path}, logs will be generated in the local dir") 
