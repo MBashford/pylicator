@@ -27,9 +27,8 @@ class pylicator():
         self.__forwd_rules = {}
         self.__forwd_rules_str = []
 
-        self.__log_path = ""
-        self.__log_file = "pylicator.log"
-        self.__data_log_file = "pylicator-data.log"
+        self.__log_path = "pylicator.log"
+        self.__data_log_path = "pylicator-data.log"
         self.__log_lock = threading.Lock()
         self.__data_log_lock = threading.Lock()
 
@@ -57,10 +56,46 @@ class pylicator():
             parsed_path = conf_path
         # othwerwise treat as dir path and use default conf name
         else:
-            parsed_path = os.join(conf_path, default_path)
+            parsed_path = os.path.join(conf_path, default_path)
             
         self.__conf_file = parsed_path
 
+
+    def __set_log_path(self, path):
+
+        default_path = self.__log_path
+        
+        if path in [None, ""]:
+            self.__log_path = default_path
+        elif os.path.isfile(path):
+            self.__log_path = path
+        elif os.path.isdir(path):
+            self.__log_path = os.path.join(path, default_path)
+        elif os.path.isdir(os.path.dirname(path)):
+            self.__log_path = path
+        elif os.path.basename(path) == path:
+            self.__log_path = path
+        else:
+            self.__log_path = default_path
+
+
+    def __set_data_log_path(self, path):
+
+        default_path = self.__data_log_path
+
+        if path in [None, ""]:
+            self.__data_log_path = default_path
+        elif os.path.isfile(path):
+            self.__data_log_path = path
+        elif os.path.isdir(path):
+            self.__data_log_path = os.path.join(path, default_path)
+        elif os.path.isdir(os.path.dirname(path)):
+            self.__data_log_path = path
+        elif os.path.basename(path) == path:
+            self.__data_log_path = path
+        else:
+            self.__data_log_path = default_path
+            
 
     def __parse_config(self):
 
@@ -79,19 +114,29 @@ class pylicator():
             log_traps = conf_file.get("settings", "log_traps")
             log_bytes = conf_file.get("settings", "log_bytes")
             log_path = conf_file.get("settings", "log_path")
+            data_log_path = conf_file.get("settings", "data_log_path")
             listen_port = conf_file.get("settings", "listen_port")
             spoof_src = conf_file.get("settings", "spoof_src")
 
-            if log_path != "" and os.path.exists(log_path):
-                self.__log_path = log_path
+            self.__set_log_path(log_path)
+            self.__set_data_log_path(data_log_path)
 
             self.__write_logs("----------------------\n" +
                             "Initialising Pylicator\n" +
                             "----------------------\n" +
                             f"Parsing config from {os.path.abspath(self.__conf_file)}")
 
-            if log_path != self.__log_path:
-                self.__write_logs(f"WARNING: Can't access directory {log_path}, logs will be generated in the local dir") 
+            if log_path not in [None, ""] and log_path not in self.__log_path:            
+                self.__write_logs(f"WARNING: Can't access {log_path}, logs will be generated in:\n" +
+                                f"{os.path.abspath(self.__log_path)}")
+            
+            if data_log_path not in [None, ""] and data_log_path not in self.__data_log_path:  
+                self.__write_logs(f"WARNING: Can't access {data_log_path}, data logs will be generated in:\n" +
+                                f"{os.path.abspath(self.__data_log_path)}") 
+
+            if self.__log_path == self.__data_log_path:
+                self.__write_logs(f"Writing logs and data to same file")
+                self.__data_log_lock = self.__data_log_lock     # use same lock to avoid overwriting 
 
             self.__log_traps = True if log_traps.lower() == "true" else False
             self.__log_bytes = True if log_bytes.lower() == "true" else False
@@ -117,6 +162,7 @@ class pylicator():
         conf_file.set("settings", "log_traps", "False")
         conf_file.set("settings", "log_bytes", "False")
         conf_file.set("settings", "log_path", "")
+        conf_file.set("settings", "data_log_path", "")
         conf_file.set("settings", "spoof_src", "False")
 
         conf_file.add_section("forwarding_rules")
@@ -192,9 +238,8 @@ class pylicator():
         return sock
 
 
-    def __write_to_file(self, f_name: str, lock: threading.Lock, msg: Union[str, list]):
+    def __write_to_file(self, f_path: str, lock: threading.Lock, msg: Union[str, list]):
         ts = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S:%f")
-        f_path = os.path.join(self.__log_path, f_name)
         pad = "                          "
         if type(msg) == str:
             msg = msg.splitlines()
@@ -214,14 +259,14 @@ class pylicator():
             entry = [f"{data[0][0]}:{data[0][1]} > {dest} {self.__decode_asn1(data[2])}"]
             if self.__log_bytes:
                 entry.append(data[2])
-            self.__write_to_file(self.__data_log_file, self.__data_log_lock, entry)
+            self.__write_to_file(self.__data_log_path, self.__data_log_lock, entry)
         except Exception as e:
             self.__write_logs(["ERROR: Unable to write data logs", str(e)])
 
 
     def __write_logs(self, entry):
         try:
-            self.__write_to_file(self.__log_file, self.__log_lock, entry)
+            self.__write_to_file(self.__log_path, self.__log_lock, entry)
         except Exception as e:
             print("ERROR: Logging failed - This may or may not be critical", file=sys.stderr)
             print(e, file=sys.stderr)
