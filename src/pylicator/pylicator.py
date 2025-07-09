@@ -3,6 +3,7 @@
 Might work for other traffic too, inspired by samplicator"""
 __author__ = "Milo Bashford"
 
+import argparse
 import configparser
 import datetime
 import ipaddress
@@ -21,7 +22,7 @@ from typing import Union
 
 class pylicator():
 
-    def __init__(self):
+    def __init__(self, conf_path="pylicator.conf"):
 
         self.__forwd_rules = {}
         self.__forwd_rules_str = []
@@ -34,7 +35,8 @@ class pylicator():
 
         self.__count_out = 0
         self.__count_out_lock = threading.Lock()
-
+        
+        self.__set_conf_path(conf_path)
         self.__parse_config()
 
         self.__srv_sock = self.__init_socket(self.__listen_addr, self.__listen_port)
@@ -43,16 +45,36 @@ class pylicator():
         signal.signal(signal.SIGINT, self.__exit)
 
 
+    def __set_conf_path(self, conf_path):
+
+        default_path = "pylicator.conf"
+
+        # use default if nothing passed
+        if conf_path is None:
+            parsed_path = default_path
+        # if file exists or path ends in .conf - assume file,
+        elif os.path.isfile(conf_path) or conf_path[-5:] == ".conf":
+            parsed_path = conf_path
+        # othwerwise treat as dir path and use default conf name
+        else:
+            parsed_path = os.join(conf_path, default_path)
+            
+        self.__conf_file = parsed_path
+
+
     def __parse_config(self):
-        file_name = r"pylicator.conf"
 
         try:
-            if os.path.exists(file_name) == False:
-                self.__write_logs("No config file found. Generating config with default values")
-                self.__gen_config(file_name)
+            if os.path.exists(self.__conf_file) == False:
+                self.__write_logs("----------------------\n" +
+                                "Initialising Pylicator\n" +
+                                "----------------------\n" +
+                                "No config file found. Generating config with default values at:\n" +
+                                f"{os.path.abspath(self.__conf_file)}")
+                self.__gen_config()
 
             conf_file = configparser.ConfigParser()
-            conf_file.read(file_name)
+            conf_file.read(self.__conf_file)
 
             log_traps = conf_file.get("settings", "log_traps")
             log_bytes = conf_file.get("settings", "log_bytes")
@@ -66,7 +88,7 @@ class pylicator():
             self.__write_logs("----------------------\n" +
                             "Initialising Pylicator\n" +
                             "----------------------\n" +
-                            f"Parsing config from {os.path.abspath(file_name)}")
+                            f"Parsing config from {os.path.abspath(self.__conf_file)}")
 
             if log_path != self.__log_path:
                 self.__write_logs(f"WARNING: Can't access directory {log_path}, logs will be generated in the local dir") 
@@ -85,7 +107,7 @@ class pylicator():
             self.__exit(status=1)
             
 
-    def __gen_config(self, file_name):
+    def __gen_config(self):
         conf_file = configparser.ConfigParser(allow_no_value=True)
 
         conf_file.add_section("settings")
@@ -102,10 +124,15 @@ class pylicator():
         conf_file.set("forwarding_rules", "0.0.0.0/0", "172.0.0.1:162 192.168.1.86:162")
         conf_file.set("forwarding_rules", "172.0.0.1/32", "172.0.0.1:5432 192.168.0.1:4321")
 
-        with open(file_name, "w") as fp:
+        # ensure dirpath to denerated conf file
+        dir_path = os.path.dirname(self.__conf_file)
+        if dir_path != "":
+            os.makedirs(dir_path, exist_ok=True)
+
+        with open(self.__conf_file, "w") as fp:
             conf_file.write(fp)
 
-        self.__write_logs(["Config file sucessfully created", "Exiting Pylicator"])
+        self.__write_logs(["Config file sucessfully created"])
         self.__exit(status=0)
 
 
@@ -327,17 +354,22 @@ class pylicator():
     
 
     def __exit(self, status=0, *args):
-        
-        if self.__log_lock.locked():
-            self.__log_lock.release()
-        if self.__data_log_lock.locked():
-            self.__data_log_lock.release()
+        try:
+            
+            if self.__log_lock.locked():
+                self.__log_lock.release()
+            if self.__data_log_lock.locked():
+                self.__data_log_lock.release()
 
-        self.__write_logs("---------------------\n" +
-                        "Terminating Pylicator\n" +
-                        "---------------------")
-        
-        sys.exit(status)
+            self.__write_logs("---------------------\n" +
+                            "Terminating Pylicator\n" +
+                            "---------------------")
+            
+        except Exception as e:
+            print(e)
+
+        finally:
+            sys.exit(status)
      
 
     def pylicate(self):
@@ -424,5 +456,11 @@ class Packet():
 
 
 if __name__ == "__main__":
-    py = pylicator()
+
+    # get passed args
+    psr = argparse.ArgumentParser()
+    psr.add_argument("-c", "--conf-path", type=str)
+    args = psr.parse_args()
+
+    py = pylicator(conf_path=args.conf_path)
     py.pylicate()
