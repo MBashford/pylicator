@@ -9,8 +9,8 @@ After=network.target
 [Service]
 Type=simple
 User=root
-WorkingDirectory=/home/nmc/pylicator/
-ExecStart=/home/nmc/pylicator/pylicator.py
+WorkingDirectory=/etc/pylicator/
+ExecStart=/etc/pylicatorVenv/bin/python /etc/pylicator/pylicator.py --conf-path /var/configs/pylicator.conf
 Restart=no
 
 [Install]
