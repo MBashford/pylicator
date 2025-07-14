@@ -42,7 +42,7 @@ Option | Description
 listen_port | the port pylicator will listen on for incoming SNMP traps, default is port 162.
 log_path | path to the pylicator log file or directory, the directory must already exist. If no file name is specified the default name `pylicator.log` will be used. Leaving this seting blank will cause logs to be written in the pylicator root directory.
 log_data_path | path to the pylicator trap logs file or directory, the directory must already exist. If no file name is specified the default name `pylicator-data.log` will be used. Leaving this setting blank will cause trap logs to be written in the pylicator root directory. If this is set to the same value as log_path, both logs and traps will be written to one file.
-log_traps | if pylicator will attempt to parse and log the contents of recieved traps using the included naive asn1 decoder.
+log_traps | if pylicator will attempt to parse and log the contents of recieved traps using the included naive asn1 decoder. Only contents of SNMPv1 and SNMPv2c traps will be parsed.
 log_bytes | if the recived traps will be logged as bytes in addition to the parsed contents. Requires trap logging to be enabled.
 spoof_src* | determines the source address to use on forwarded packets. True: use ip received with traps, False: use pylicator host ip
 
