@@ -349,8 +349,6 @@ class pylicator():
             return val
         
         try:
-            dec = asn1.Decoder()
-            dec.start(byte_str)
 
             def decode_mill(input: asn1.Decoder):
                 out_str = ""
@@ -377,10 +375,25 @@ class pylicator():
                         input.leave()
                 return out_str
 
-            val = decode_mill(dec)
+            dec = asn1.Decoder()
+            dec.start(byte_str)
 
-            val_split = val.split("  ", 3)
-            val = f"C={val_split[2]} SNMPv{int(val_split[1])+1}  {val_split[3]}"
+            # get snmp version
+            # 0 = SNMPv1, 1 = SNMPv2c, 3 = SNMPv3
+
+            dec.enter()
+            tag, ver = dec.read()
+
+            # only try to read v1 and v2c traps
+            if  ver< 3:
+                val = decode_mill(dec)
+                val_split = val.split("  ", 3)
+                val = f"C={val_split[1]} SNMPv{'1' if ver==0 else '2c'}  {val_split[-1]}"
+
+            else:
+                val = f"SNMPv{ver} - Unable to decrypt contents"
+
+            return val
         
 
         except  Exception as e:
